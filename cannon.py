@@ -1,10 +1,13 @@
-from random import randrange
+from random import randrange , choice
 from turtle import *
 from freegames import vector
 
 ball = vector(-200, -200)
 speed = vector(0, 0)
+colors = ['red', 'green', 'purple', 'yellow', 'orange']
 targets = []
+target_Color = choice(colors)
+ball_Color = choice(colors)
 
 def tap(x, y):
     "Respond to screen tap."
@@ -24,11 +27,17 @@ def draw():
 
     for target in targets:
         goto(target.x, target.y)
-        dot(20, 'blue')
+        dot(20, target_Color)  
 
     if inside(ball):
         goto(ball.x, ball.y)
-        dot(6, 'red')
+        begin_fill()
+        color(choice(colors))
+        left(10)
+        for _ in range(8):
+            forward(20)  # Lado del triángulo
+            left(135)  # Ángulo para un triángulo equilátero
+        end_fill()
 
     update()
 
