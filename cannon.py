@@ -1,96 +1,178 @@
-from random import randrange, choice
+from random import choice
 from turtle import *
-from freegames import vector
+from freegames import floor, vector
 
-ball = vector(-200, -200)
-speed = vector(0, 0)
-colors = ['red', 'green', 'purple', 'yellow', 'orange']
-targets = []
-target_Color = choice(colors)
-ball_Color = choice(colors)
+state = {'score': 0}
+path = Turtle(visible=False)
+writer = Turtle(visible=False)
+aim = vector(5, 0)
+pacman = vector(-40, -80)
+ghosts = [
+    [vector(-180, 160), vector(10, 0)],
+    [vector(-180, -160), vector(0, 10)],
+    [vector(100, 160), vector(0, -10)],
+    [vector(100, -160), vector(-10, 0)],
+]
+tiles = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+    0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0,
+    0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0,
+    0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0,
+    0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0,
+    0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0,
+    0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0,
+    0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0,
+    0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+    0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0,
+    0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+]
 
-def tap(x, y):
-    "Respond to screen tap."
-    if not inside(ball):
-        ball.x = -199
-        ball.y = -199
-        speed.x = (x + 200) / 15
-        speed.y = (y + 200) / 15
+def square(x, y):
+    "Draw square using path at (x, y)."
+    path.up()
+    path.goto(x, y)
+    path.down()
+    path.begin_fill()
 
-def inside(xy):
-    "Return True if xy within screen."
-    return -200 < xy.x < 200 and -200 < xy.y < 200
+    for count in range(4):
+        path.forward(20)
+        path.left(90)
 
-def draw():
-    "Draw ball and targets."
+    path.end_fill()
+
+def offset(point):
+    "Return offset of point in tiles."
+    x = (floor(point.x, 20) + 200) / 20
+    y = (180 - floor(point.y, 20)) / 20
+    index = int(x + y * 20)
+    return index
+
+def valid(point):
+    "Return True if point is valid in tiles."
+    index = offset(point)
+
+    if tiles[index] == 0:
+        return False
+
+    index = offset(point + 19)
+
+    if tiles[index] == 0:
+        return False
+
+    return point.x % 20 == 0 or point.y % 20 == 0
+
+def world():
+    "Draw world using path."
+    bgcolor('black')
+    path.color('green')  # Cambié el color del laberinto a verde
+
+    for index in range(len(tiles)):
+        tile = tiles[index]
+
+        if tile > 0:
+            x = (index % 20) * 20 - 200
+            y = 180 - (index // 20) * 20
+            square(x, y)
+
+            if tile == 1:
+                path.up()
+                path.goto(x + 10, y + 10)
+                path.dot(2, 'white')
+
+def move():
+    "Move pacman and all ghosts."
+    writer.undo()
+    writer.write(state['score'])
+
     clear()
 
-    # Dibuja los objetivos
-    for target in targets:
-        goto(target.x, target.y)
-        dot(20, target_Color)
+    if valid(pacman + aim):
+        pacman.move(aim)
 
-    # Dibuja la bola
-    if inside(ball):
-        goto(ball.x, ball.y)
-        begin_fill()
-        color(choice(colors))
-        left(10)
-        for _ in range(8):
-            forward(20)
-            left(135)
-        end_fill()
+    index = offset(pacman)
+
+    if tiles[index] == 1:
+        tiles[index] = 2
+        state['score'] += 1
+        x = (index % 20) * 20 - 200
+        y = 180 - (index // 20) * 20
+        square(x, y)
+
+    up()
+    goto(pacman.x + 10, pacman.y + 10)
+    dot(20, 'yellow')
+
+    for point, course in ghosts:
+        options = [
+            vector(5, 0),
+            vector(-5, 0),
+            vector(0, 5),
+            vector(0, -5),
+        ]
+
+        valid_options = [option for option in options if valid(point + option)]
+
+        min_distance = float('inf')
+        best_course = course
+        for option in valid_options:
+            distance = abs((point + option) - pacman)
+            if distance < min_distance:
+                min_distance = distance
+                best_course = option
+
+        point.move(best_course)
+
+        if valid(point + course):
+            point.move(course)
+        else:
+            options = [
+                vector(10, 0),
+                vector(-10, 0),
+                vector(0, 10),
+                vector(0, -10),
+            ]
+            plan = choice(options)
+            course.x = plan.x
+            course.y = plan.y
+
+        up()
+        goto(point.x + 10, point.y + 10)
+        dot(20, 'red')
 
     update()
 
-def move():
-    "Move ball and targets."
-    if randrange(40) == 0:
-        y = randrange(-150, 150)
-        target = vector(200, y)
-        targets.append(target)
+    for point, course in ghosts:
+        if abs(pacman - point) < 20:
+            return
 
-    # Mueve los objetivos
-    for target in targets:
-        target.x -= 1
+    ontimer(move, 70)
 
-        # Reposicionar el objetivo si sale de la pantalla
-        if not inside(target):
-            target.x = 200
-            target.y = randrange(-150, 150)
+def change(x, y):
+    "Change pacman aim if valid."
+    if valid(pacman + vector(x, y)):
+        aim.x = x
+        aim.y = y
 
-    # Mueve la bola
-    if inside(ball):
-        speed.y -= 0.7
-        ball.move(speed)
-
-    # Reposicionar la bola si sale de la pantalla
-    if not inside(ball):
-        if ball.x < -200:
-            ball.x = 200
-        elif ball.x > 200:
-            ball.x = -200
-        if ball.y < -200:
-            ball.y = 200
-        elif ball.y > 200:
-            ball.y = -200
-
-    dupe = targets.copy()
-    targets.clear()
-
-    # Mantener solo los objetivos que no colisionan con la bola
-    for target in dupe:
-        if abs(target - ball) > 13:
-            targets.append(target)
-
-    draw()
-    ontimer(move, 30)  # Repetir el movimiento cada 30 ms
-
-# Configuración del entorno gráfico
 setup(420, 420, 370, 0)
 hideturtle()
-up()
 tracer(False)
-onscreenclick(tap)
+writer.goto(160, 160)
+writer.color('white')
+writer.write(state['score'])
+listen()
+onkey(lambda: change(5, 0), 'Right')
+onkey(lambda: change(-5, 0), 'Left')
+onkey(lambda: change(0, 5), 'Up')
+onkey(lambda: change(0, -5), 'Down')
+world()
 move()
 done()
