@@ -6,7 +6,7 @@ from freegames import vector
 ball = vector(-200, -200)
 speed = vector(0, 0)
 COLORS = ['red', 'green', 'purple', 'yellow', 'orange']
-targets = []fds
+targets = []
 TARGET_COLOR = choice(COLORS)
 BALL_COLOR = choice(COLORS)
 
